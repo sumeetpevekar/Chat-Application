@@ -1,54 +1,71 @@
+
 import React, { useEffect, useMemo, useState } from "react";
-import {io} from 'socket.io-client'
-// import {Container, Button, TextField, Typography} from "@mui/material";
-import styles from './App.module.css'
-import { style } from "@mui/system";
+import { io } from "socket.io-client";
+import styles from "./App.module.css";
+import { IoMdSend } from "react-icons/io";
+const App = () => {
+  const socket = useMemo(() => io("http://localhost:3000"), []);
 
-const App =() =>{
-  const socket = useMemo(()=>io('http://localhost:3000'),[])
+  const [message, setMessage] = useState("");
+  const [socketId, setSocketId] = useState("");
+  const [messages, setMessages] = useState([]);
 
-  const [message, setMessage] = useState("")
-  const [socketId, setSocketId] = useState("")
-  const [messages, setMessages] = useState([])
-  console.log(messages  )
+  console.log(messages);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    socket.emit("message", message)
-    setMessage("");
-  }
-  useEffect(()=>{
-    socket.on('connect', ()=>{
-      setSocketId(socket.id)
-      console.log("user connected")
-    })
+    const messageData = { text: message, senderId: socketId }; 
+    socket.emit("message", messageData);
+    setMessages((prevMessages) => [...prevMessages, messageData]); 
+    setMessage(""); 
+  };
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      setSocketId(socket.id);
+      console.log("user connected");
+    });
+
     socket.on("receive-message", (data) => {
-      console.log(data)
-      setMessages(()=> [...messages, data])
-    })
-    socket.on("welcome", (s)=>{
-      console.log(s)
-    })
+      console.log(data);
+      setMessages((prevMessages) => [...prevMessages, data]); 
+    });
+
+    socket.on("welcome", (s) => {
+      console.log(s);
+    });
+
     return () => {
+      socket.off("connect");
+      socket.off("receive-message");
+      socket.off("welcome");
       socket.disconnect();
     };
-  }, [])
+  }, [socket]); 
   return (
-    <>
     <div className={styles.container} maxWidth="sm">
       <div className={styles.logoImg}></div>
       <div className={styles.messageContainer}>
-        {messages.map((m, i)=>(
-          <p className={styles.messageLeft} key={i}>{m}</p>
+        {messages.map((m, i) => (
+          <p
+            className={m.senderId === socketId ? styles.messageRight : styles.messageLeft}
+            key={i}
+          >
+            {m.text}
+          </p>
         ))}
-        {/* <div className={styles.messageRight}>Lorem ipsum, dolor sit amet consectetur adipisicing elit.</div> */}
       </div>
       <form onSubmit={handleSubmit} className={styles.form}>
-        <input value={message} className={styles.messageInput}
-        onChange={e=> setMessage(e.target.value)} id="messageInput"/>
-        <button type="submit" className={styles.sendBtn}></button>
+        <input
+          value={message}
+          className={styles.messageInput}
+          onChange={(e) => setMessage(e.target.value)}
+          id="messageInput"
+        />
+        <button type="submit" className={styles.sendBtn}><IoMdSend /></button>
       </form>
     </div>
-        </>
-  )
-}
+  );
+};
+
 export default App;
